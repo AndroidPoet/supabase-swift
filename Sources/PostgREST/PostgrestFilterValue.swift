@@ -1,4 +1,5 @@
 import Foundation
+import Helpers
 
 /// A value that can be used to filter Postgrest queries.
 public protocol PostgrestFilterValue {
@@ -40,7 +41,14 @@ extension Date: PostgrestFilterValue {
 
 extension Array: PostgrestFilterValue where Element: PostgrestFilterValue {
   public var rawValue: String {
-    "{\(map(\.rawValue).joined(separator: ","))}"
+    let elements = map { element -> String in
+      let raw = element.rawValue
+      if raw.hasPrefix("{"), raw.hasSuffix("}") {
+        return raw
+      }
+      return escapePostgRESTArrayLiteralElement(raw)
+    }
+    return "{\(elements.joined(separator: ","))}"
   }
 }
 
