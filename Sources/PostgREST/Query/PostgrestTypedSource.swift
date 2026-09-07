@@ -13,11 +13,6 @@ extension PostgrestClient {
   /// let todos = try await client.from(Todo.self).select().execute().value
   /// ```
   ///
-  /// The request targets the schema the relation declares through
-  /// ``PostgrestRelation/schema``, unless this client was already scoped with ``schema(_:)``, in
-  /// which case the client's schema wins. A relation in `public` on an unscoped client sends no
-  /// profile header, which is PostgREST's default.
-  ///
   /// - Parameter relation: The relation type to query.
   /// - Returns: A ``PostgrestTypedSource`` for that relation.
   public func from<R: PostgrestRelation>(_ relation: R.Type) -> PostgrestTypedSource<R> {
