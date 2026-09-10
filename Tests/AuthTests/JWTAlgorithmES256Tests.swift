@@ -85,7 +85,27 @@ struct JWTAlgorithmES256Tests {
   }
 
   @Test
-  func p256PublicKeyRejectsMalformedCoordinates() {
+  func p256PublicKeyRejectsWrongLengthCoordinates() {
+    let signer = ES256TestSigner()
+    let base = signer.jwk
+    let jwk = JWK(
+      kty: base.kty,
+      keyOps: base.keyOps,
+      alg: base.alg,
+      kid: base.kid,
+      n: nil,
+      e: nil,
+      crv: base.crv,
+      x: base.x,
+      y: Base64URL.encode(Data(repeating: 0x01, count: 31)),
+      k: nil
+    )
+
+    #expect(jwk.p256PublicKey == nil)
+  }
+
+  @Test
+  func p256PublicKeyRejectsOffCurvePoint() {
     let jwk = JWK(
       kty: "EC",
       keyOps: nil,
@@ -94,8 +114,8 @@ struct JWTAlgorithmES256Tests {
       n: nil,
       e: nil,
       crv: "P-256",
-      x: "AAAA",
-      y: "!!!invalid-base64!!!",
+      x: Base64URL.encode(Data(repeating: 0x00, count: 32)),
+      y: Base64URL.encode(Data(repeating: 0x00, count: 32)),
       k: nil
     )
 
