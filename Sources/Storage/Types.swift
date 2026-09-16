@@ -170,41 +170,6 @@ public struct FileOptions: Sendable {
   }
 }
 
-/// A single signed URL returned as part of a batch sign operation.
-///
-/// Returned by ``StorageFileApi/createSignedURLs(paths:expiresIn:download:cacheNonce:)-(_,_,DownloadBehavior?,_)``
-/// (the legacy `[SignedURL]` overload). Prefer the ``SignedURLResult`` overload for new code.
-///
-/// ## Topics
-///
-/// ### Properties
-///
-/// - ``error``
-/// - ``signedURL``
-/// - ``path``
-public struct SignedURL: Decodable, Sendable {
-  /// An optional error message. Non-nil when the path could not be signed.
-  public var error: String?
-
-  /// The signed URL.
-  public var signedURL: URL
-
-  /// The requested file path.
-  public var path: String
-
-  /// Creates a ``SignedURL``.
-  ///
-  /// - Parameters:
-  ///   - error: An optional error message when signing failed.
-  ///   - signedURL: The resulting signed URL.
-  ///   - path: The requested file path.
-  public init(error: String? = nil, signedURL: URL, path: String) {
-    self.error = error
-    self.signedURL = signedURL
-    self.path = path
-  }
-}
-
 /// Represents the per-item result of a ``StorageFileApi/createSignedURLs(paths:expiresIn:download:cacheNonce:)-(_,_,DownloadBehavior?,_)`` call.
 ///
 /// It is guaranteed that exactly one case applies per item: either the URL was signed

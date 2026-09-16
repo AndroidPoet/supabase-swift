@@ -2452,3 +2452,26 @@ Text(details.user.email)
 Text(details.client.name ?? "Unnamed app")
 Text(details.user.email ?? "No email on file")
 ```
+
+## `SignedURL` is removed
+
+The `SignedURL` struct is gone. Use `SignedURLResult`, which
+`createSignedURLs(paths:expiresIn:download:cacheNonce:)` already returns.
+
+Both `createSignedURLs` overloads return `[SignedURLResult]`. The `[SignedURL]` overload that
+produced this type was removed earlier, so nothing in the SDK could hand you a `SignedURL`: the
+only way to get one was to call its own initializer, and no API accepted it.
+
+`SignedURLResult` also models the batch response more accurately. A path that cannot be signed is
+a `.failure` case rather than a value whose `signedURL` is filled in and whose `error` happens to
+be non-nil.
+
+This is a compile error only if you named the type yourself.
+
+```swift
+// Before
+let urls: [SignedURL] = []
+
+// After
+let urls: [SignedURLResult] = []
+```

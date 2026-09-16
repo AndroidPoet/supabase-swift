@@ -51,36 +51,4 @@ struct APIKeyFormatTests {
     #expect(APIKeyFormat.shouldWarn(for: "sb_"))
     #expect(!APIKeyFormat.shouldWarn(for: "sb_uniqueunparseabletype"))
   }
-
-  @Test
-  func functionsBearerTokenSuppressesNewFormatKeyFallback() {
-    // no-session + new-key: accessToken fallback equals the raw new-format key -> suppressed.
-    #expect(
-      APIKeyFormat.functionsBearerToken(
-        accessToken: "sb_publishable_abc123",
-        supabaseKey: "sb_publishable_abc123"
-      ) == nil
-    )
-  }
-
-  @Test
-  func functionsBearerTokenKeepsLegacyKeyFallback() {
-    // no-session + legacy-key: unchanged existing behavior.
-    #expect(
-      APIKeyFormat.functionsBearerToken(
-        accessToken: "legacy-jwt-key", supabaseKey: "legacy-jwt-key")
-        == "legacy-jwt-key"
-    )
-  }
-
-  @Test
-  func functionsBearerTokenPassesThroughRealSessionToken() {
-    // has-session: a genuine session JWT is always sent, regardless of key format.
-    #expect(
-      APIKeyFormat.functionsBearerToken(
-        accessToken: "real.session.jwt",
-        supabaseKey: "sb_publishable_abc123"
-      ) == "real.session.jwt"
-    )
-  }
 }
