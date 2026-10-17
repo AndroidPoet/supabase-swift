@@ -17,6 +17,7 @@ actor ConnectionManager {
     bufferingPolicy: .unbounded
   )
   private(set) var state: State = .disconnected
+  private var connectWaiters: [UUID: CheckedContinuation<Void, any Error>] = [:]
 
   private let transport: LegacyWebSocketTransport
   private let url: URL
@@ -62,7 +63,7 @@ actor ConnectionManager {
 
     case .connecting(let task):
       logger.debug("Connection already in progress, waiting...")
-      try await task.value
+      try await waitForInFlight(task)
       guard case .connected(let conn) = state else {
         throw RealtimeError.transport("Connection failed")
       }
@@ -78,7 +79,7 @@ actor ConnectionManager {
 
     case .reconnecting(let task, _):
       logger.debug("Reconnection in progress, waiting...")
-      try await task.value
+      try await waitForInFlight(task)
       guard case .connected(let conn) = state else {
         throw RealtimeError.transport("Connection failed")
       }
@@ -185,6 +186,34 @@ actor ConnectionManager {
       updateState(.disconnected)
       throw error
     }
+  }
+
+  private func waitForInFlight(_ task: Task<Void, any Error>) async throws {
+    let id = UUID()
+    try await withTaskCancellationHandler {
+      try await withCheckedThrowingContinuation {
+        (continuation: CheckedContinuation<Void, any Error>) in
+        if Task.isCancelled {
+          continuation.resume(throwing: CancellationError())
+          return
+        }
+        connectWaiters[id] = continuation
+        Task { [weak self] in
+          let result = await task.result
+          await self?.settleWait(id, with: result)
+        }
+      }
+    } onCancel: {
+      Task { await self.cancelWait(id) }
+    }
+  }
+
+  private func settleWait(_ id: UUID, with result: Result<Void, any Error>) {
+    connectWaiters.removeValue(forKey: id)?.resume(with: result)
+  }
+
+  private func cancelWait(_ id: UUID) {
+    connectWaiters.removeValue(forKey: id)?.resume(throwing: CancellationError())
   }
 
   /// Keep retrying the reconnect with exponential backoff until a connection

@@ -407,4 +407,51 @@ struct ConnectionManagerTests {
     let isConnected = await sut.connection != nil
     #expect(!isConnected, "Connection should be disconnected after application close")
   }
+
+  @Test
+  func connectWaiterIsReleasedWhenCancelledDuringPersistentReconnect() async throws {
+    let connectionCount = LockIsolated(0)
+    let ws = self.ws
+
+    let sut = makeSUT(
+      reconnectDelay: .milliseconds(10),
+      transport: { _, _ in
+        let attempt = connectionCount.withValue { count -> Int in
+          count += 1
+          return count
+        }
+        if attempt > 1 {
+          throw TestError.sample
+        }
+        return ws
+      }
+    )
+
+    try await sut.connect()
+    await sut.handleError(TestError.sample)
+
+    let waiterFinished = LockIsolated(false)
+    let waiter = Task {
+      _ = try? await sut.connect()
+      waiterFinished.setValue(true)
+    }
+    let reconnectRetried = await waitUntil(timeout: 2) { connectionCount.value >= 3 }
+    #expect(reconnectRetried, "The outage must outlast at least one failed reconnect attempt")
+    #expect(!waiterFinished.value, "A waiter must stay parked while the reconnect keeps failing")
+
+    waiter.cancel()
+
+    let released = await waitUntil(timeout: 2) { waiterFinished.value }
+    #expect(
+      released,
+      "Cancelling a connect() waiter must release it without waiting for the shared reconnect"
+    )
+    var stillReconnecting = false
+    if case .reconnecting = await sut.state {
+      stillReconnecting = true
+    }
+    #expect(stillReconnecting, "One waiter's cancellation must not tear down the shared reconnect")
+
+    await sut.disconnect(reason: "test cleanup")
+  }
 }
